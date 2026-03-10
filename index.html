@@ -85,16 +85,15 @@ height:60px;
 
 <script>
 
-const SUPABASE_URL =
-"https://amxxzcnmhfeppikwceyp.supabase.co";
+const SUPABASE_URL = "https://amxxzcnmhfeppikwceyp.supabase.co";
 
-const SUPABASE_KEY =
-"あなたのanon key";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFteHh6Y25taGZlcHBpa3djZXlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxMTcxMDQsImV4cCI6MjA4ODY5MzEwNH0._-cQvXZw0MH4TNYrus48vMEKOW7HSQC87d7U1DMwZH8";
 
-const supabase =
-window.supabase.createClient(
-SUPABASE_URL,
-SUPABASE_KEY
+const { createClient } = supabase;
+
+const db = createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
 );
 
 let currentRoom="";
@@ -105,7 +104,7 @@ async function createRoom(){
 const room=document.getElementById("room").value;
 const pass=document.getElementById("roompass").value;
 
-const { error } = await supabase
+const { error } = await db
 .from("rooms")
 .insert({
 name:room,
@@ -126,7 +125,7 @@ userName=document.getElementById("name").value;
 const room=document.getElementById("room").value;
 const pass=document.getElementById("roompass").value;
 
-const { data } = await supabase
+const { data } = await db
 .from("rooms")
 .select("*")
 .eq("name",room)
@@ -142,13 +141,13 @@ alert("パスワード違う");
 return;
 }
 
-const { data:ban } = await supabase
+const { data:ban } = await db
 .from("bans")
 .select("*")
 .eq("room",room)
 .eq("user_name",userName);
 
-if(ban.length>0){
+if(ban && ban.length>0){
 alert("BANされています");
 return;
 }
@@ -165,7 +164,7 @@ const text=document.getElementById("msg").value;
 
 if(!text||!currentRoom)return;
 
-await supabase
+await db
 .from("messages")
 .insert({
 room:currentRoom,
@@ -181,7 +180,7 @@ document.getElementById("msg").value="";
 async function loadMessages(){
 
 const { data } =
-await supabase
+await db
 .from("messages")
 .select("*")
 .eq("room",currentRoom)
@@ -191,7 +190,9 @@ const box=document.getElementById("messages");
 
 box.innerHTML="";
 
+if(data){
 data.forEach(addMessage);
+}
 
 }
 
@@ -218,7 +219,7 @@ div.scrollIntoView();
 
 }
 
-supabase
+db
 .channel("chat")
 .on(
 "postgres_changes",
