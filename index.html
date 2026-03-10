@@ -85,19 +85,49 @@ height:60px;
 
 <script>
 
-const SUPABASE_URL = "https://amxxzcnmhfeppikwceyp.supabase.co";
+const SUPABASE_URL =
+"https://amxxzcnmhfeppikwceyp.supabase.co";
 
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFteHh6Y25taGZlcHBpa3djZXlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxMTcxMDQsImV4cCI6MjA4ODY5MzEwNH0._-cQvXZw0MH4TNYrus48vMEKOW7HSQC87d7U1DMwZH8";
+const SUPABASE_KEY =
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFteHh6Y25taGZlcHBpa3djZXlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxMTcxMDQsImV4cCI6MjA4ODY5MzEwNH0._-cQvXZw0MH4TNYrus48vMEKOW7HSQC87d7U1DMwZH8";
 
 const { createClient } = supabase;
 
 const db = createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
+SUPABASE_URL,
+SUPABASE_KEY
 );
 
 let currentRoom="";
 let userName="";
+let userIP="unknown";
+
+/* IP取得 */
+
+async function getIP(){
+
+try{
+
+const res =
+await fetch(
+"https://api64.ipify.org?format=json"
+);
+
+const data=await res.json();
+
+userIP=data.ip;
+
+}catch{
+
+console.log("IP取得失敗");
+
+}
+
+}
+
+getIP();
+
+/* 部屋作成 */
 
 async function createRoom(){
 
@@ -112,17 +142,25 @@ password:pass
 });
 
 if(error){
+
 alert("部屋は既に存在");
+
 }else{
+
 alert("部屋作成成功");
+
 }
 
 }
+
+/* 入室 */
 
 async function join(){
 
 userName=document.getElementById("name").value;
+
 const room=document.getElementById("room").value;
+
 const pass=document.getElementById("roompass").value;
 
 const { data } = await db
@@ -132,24 +170,19 @@ const { data } = await db
 .single();
 
 if(!data){
+
 alert("部屋が存在しません");
+
 return;
+
 }
 
 if(data.password && data.password!==pass){
+
 alert("パスワード違う");
-return;
-}
 
-const { data:ban } = await db
-.from("bans")
-.select("*")
-.eq("room",room)
-.eq("user_name",userName);
-
-if(ban && ban.length>0){
-alert("BANされています");
 return;
+
 }
 
 currentRoom=room;
@@ -157,6 +190,8 @@ currentRoom=room;
 loadMessages();
 
 }
+
+/* 送信 */
 
 async function send(){
 
@@ -167,15 +202,20 @@ if(!text||!currentRoom)return;
 await db
 .from("messages")
 .insert({
+
 room:currentRoom,
 user_name:userName,
+ip:userIP,
 text:text,
 time:Date.now()
+
 });
 
 document.getElementById("msg").value="";
 
 }
+
+/* メッセージ読み込み */
 
 async function loadMessages(){
 
@@ -191,10 +231,14 @@ const box=document.getElementById("messages");
 box.innerHTML="";
 
 if(data){
+
 data.forEach(addMessage);
+
 }
 
 }
+
+/* 表示 */
 
 function addMessage(m){
 
@@ -203,21 +247,48 @@ const div=document.createElement("div");
 div.className="msg";
 
 if(m.user_name===userName){
+
 div.classList.add("me");
+
 }
 
 const date=new Date(m.time);
 
 div.innerHTML=
-"<b>"+m.user_name+"</b> "+
+
+"<b>"+m.user_name+
+"</b> ("+m.ip+") "+
 date.toLocaleTimeString()+
 "<br>"+m.text;
+
+if(userName==="admin"){
+
+const del=document.createElement("button");
+
+del.innerText="削除";
+
+del.onclick=async()=>{
+
+await db
+.from("messages")
+.delete()
+.eq("id",m.id);
+
+div.remove();
+
+};
+
+div.appendChild(del);
+
+}
 
 document.getElementById("messages").appendChild(div);
 
 div.scrollIntoView();
 
 }
+
+/* リアルタイム */
 
 db
 .channel("chat")
@@ -233,7 +304,9 @@ payload=>{
 const msg=payload.new;
 
 if(msg.room===currentRoom){
+
 addMessage(msg);
+
 }
 
 }
